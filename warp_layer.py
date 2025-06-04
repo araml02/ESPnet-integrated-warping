@@ -15,7 +15,7 @@ class PiecewiseLinearVTLNWarp(nn.Module):
     def _warp_frequencies(self, f, alpha1, B):
         alpha1 = alpha1.view(B, 1)  # [B, 1]
         f = f.view(1, -1)  # [1, F]
-        warped_f = f**(alpha1)
+        warped_f = f**(alpha1) # You can change this to f / alpha
         return warped_f.view(B, 1, -1)  # [B, 1, F]
 
     def forward(self, x, utt_2_warp=None):
