@@ -21,6 +21,7 @@ We started exploring VTLN in Kaldi and we integrated the following methods in ES
 ### How to use it
 - Train model by running stage 3 - 11 in ESPnet (asr.sh file)
 - Run warping script by inserting Stage 16 in asr.sh
+    - This requires some new files and some changes in ESPnet, which are explained below
 - Decode as usual by running Stage 12
 
 ---
@@ -42,14 +43,19 @@ We started exploring VTLN in Kaldi and we integrated the following methods in ES
   - /espnet/espnet2/train/dataset.py
   - /espnet/espnet2/asr/espnet_model.py
   - /espnet/espnet2/bin/asr_inference.py
-
-### 3. Run with asr.sh
+ 
+### 4. Add the following new files
+- add /espnet/espnet2/asr/warp_layer.py
+  - You can choose the warping function here: f/alpha or f**alpha
+- add espnet_speaker_warping.py to your project directory (egs/...)
+  
+### 5. Run with asr.sh
 We recommend using our asr_new.sh script
 - asr.sh:
   - Stage 12: allow variable data keys "True"
   - Insert Stage 16
 
-### 4. If you want to continue working on pre-processing the features
+### 6. If you want to continue working on pre-processing the features
 This is the same principle, but just different warping technique
 
 - Changes in ESPnet to use warping in the default frontend:
