@@ -70,7 +70,7 @@ class ESPnetASRModel(AbsESPnetModel):
         extract_feats_in_collect_stats: bool = True,
         lang_token_id: int = -1,
         use_warp_layer = False,
-        use_warp_raw = False,
+        use_warp_frontend = False,
     ):
         assert 0.0 <= ctc_weight <= 1.0, ctc_weight
         assert 0.0 <= interctc_weight < 1.0, interctc_weight
@@ -80,9 +80,9 @@ class ESPnetASRModel(AbsESPnetModel):
         #                  which doesn't use <blank> token
 
         # ARAM ===============
-        self.use_warp_raw = use_warp_raw
+        self.use_warp_frontend = use_warp_frontend
         self.use_warp_layer = use_warp_layer
-        if self.use_warp_layer or self.use_warp_raw:
+        if self.use_warp_layer or self.use_warp_frontend:
             self.warp_init()
         # ARAM =============
 
@@ -419,21 +419,24 @@ class ESPnetASRModel(AbsESPnetModel):
         utt_id = kwargs.get("utt_id", None)
         # For decoding get it from the KWARGS
         utt2warp = kwargs.get("warp", None)
-        print(f"kwargs: {kwargs}")
-        print(f"speech: {speech}")
+        # print(f"kwargs: {kwargs}")
+        # print(f"speech: {speech}")
+        frontend_warping = True # To pass warp to frontend during decoding
 
         with autocast(False):
             # 1. Extract feats
-            feats, feats_lengths = self._extract_feats(speech, speech_lengths, warp=utt2warp)
+            warp = None
+            if frontend_warping == True:
+                warp = utt2warp
+            feats, feats_lengths = self._extract_feats(speech, speech_lengths, warp=warp)
 
             # ARAM ==========
             # When training the alphas
             if self.use_warp_layer:
                 feats.requires_grad = True
-                #feats = feats.detach().requires_grad_()
                 feats = self.warp_layer(feats, utt2warp)
-            # When doing decoding we should have this
-            elif utt2warp is not None:
+            # Not so elegant solution to use the warp layer during decoding:
+            elif utt2warp is not None and frontend_warping == False:
                 if utt2warp.item() != 0:
                     self.warp_layer = PiecewiseLinearVTLNWarp()
                     feats = self.warp_layer(feats, utt2warp)
@@ -496,7 +499,7 @@ class ESPnetASRModel(AbsESPnetModel):
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         assert speech_lengths.dim() == 1, speech_lengths.shape
         utt2warp = kwargs.get("warp", None)
-        print(f"utt2warp inside extract feats: {utt2warp}")
+        # print(f"utt2warp inside extract feats: {utt2warp}")
         # for data-parallel
         speech = speech[:, : speech_lengths.max()]
 
@@ -506,9 +509,11 @@ class ESPnetASRModel(AbsESPnetModel):
             #       data_loader may send time-domain signal in this case
             # speech (Batch, NSamples) -> feats: (Batch, NFrames, Dim)
 
-            # removed for test
+            # ARAM =================
+            # Outcomment this if you want to warp ESPnet mel banks:
             # feats, feats_lengths = self.frontend(speech, speech_lengths, utt2warp)
-            feats, feats_lengths = self.frontend(speech, speech_lengths)
+            # ARAM ================
+            feats, feats_lengths = self.frontend(speech, speech_lengths, utt2warp)
         
         else:
             # No frontend and no feature extract
