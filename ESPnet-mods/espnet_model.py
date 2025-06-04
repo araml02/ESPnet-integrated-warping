@@ -5,7 +5,7 @@ from typing import Dict, List, Optional, Tuple, Union
 import torch
 from packaging.version import parse as V
 from typeguard import typechecked
-from espnet2.asr.warp_layer import PiecewiseLinearVTLNWarp
+from espnet2.asr.warp_layer import Filterbankwarping
 from espnet2.asr.ctc import CTC
 from espnet2.asr.decoder.abs_decoder import AbsDecoder
 from espnet2.asr.encoder.abs_encoder import AbsEncoder
@@ -421,7 +421,7 @@ class ESPnetASRModel(AbsESPnetModel):
         utt2warp = kwargs.get("warp", None)
         # print(f"kwargs: {kwargs}")
         # print(f"speech: {speech}")
-        frontend_warping = True # To pass warp to frontend during decoding
+        frontend_warping = False # To pass warp to frontend during decoding
 
         with autocast(False):
             # 1. Extract feats
@@ -438,7 +438,7 @@ class ESPnetASRModel(AbsESPnetModel):
             # Not so elegant solution to use the warp layer during decoding:
             elif utt2warp is not None and frontend_warping == False:
                 if utt2warp.item() != 0:
-                    self.warp_layer = PiecewiseLinearVTLNWarp()
+                    self.warp_layer = Filterbankwarping()
                     feats = self.warp_layer(feats, utt2warp)
             # ARAM ==========
 
