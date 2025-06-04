@@ -9,7 +9,7 @@ import kaldiio
 from espnet2.bin.asr_inference import Speech2Text
 from espnet2.text.build_tokenizer import build_tokenizer
 from espnet2.text.token_id_converter import TokenIDConverter
-from espnet2.asr.warp_layer import PiecewiseLinearVTLNWarp
+from espnet2.asr.warp_layer import Filterbankwarping
 from torch.cuda.amp import autocast
 import shutil
 import numpy as np
@@ -212,16 +212,6 @@ def run_speaker_grid_search(warp_espnet_frontend, raw, decode, wordtask, speech2
             if utt_id not in scp_reader or utt_id not in text:
                 continue
             try:
-                # if not raw:
-                #     feat = scp_reader[utt_id]
-                #     speech = torch.tensor(feat, dtype=torch.float32).unsqueeze(0).to(device)
-                #     current_dur =  speech.shape[1] * 0.01 # assume 10ms per frame
-                # if raw:
-                #     wave_path = scp_reader[utt_id]
-                #     speech, sr = torchaudio.load(wave_path)  # speech shape: (1, T)
-                #     speech = speech.to(torch.float32).to(device)
-                #     current_dur = speech.shape[1] / 16000 # assume 16kHz SR
-                # speech_lengths = torch.tensor([speech.shape[1]], dtype=torch.long).to(device)
                 speech, speech_lengths, current_dur = load_speech_and_lengths(scp_reader, utt_id, raw, device)
                 ids = encode_text(text[utt_id])
                 if len(ids) == 0:
@@ -306,10 +296,10 @@ def main():
     alpha_range = (0.75, 1.2)       # For grid search
     wordtask = None
     wordtask = "AVI"                # Optional if you want to prioritize some wordtasks
-    decode = True                   # If you want to compute CER in grid search to plot CER(alpha)
+    decode = False                   # If you want to compute CER in grid search to plot CER(alpha)
 
 
-    warp_espnet_frontend = True     # If you want to warp pre-processed futures with ESPnet frontend
+    warp_espnet_frontend = False     # If you want to warp pre-processed futures with ESPnet frontend
 
     logging.info(f"Gradient Descent: {grad_desc}")
     logging.info(f"Grid Search: {grid_search}")
@@ -337,7 +327,7 @@ def main():
     model.to(device)
     if not hasattr(model, "warp_layer") and not warp_espnet_frontend:
         model.use_warp_layer = True
-        model.warp_layer = PiecewiseLinearVTLNWarp()
+        model.warp_layer = Filterbankwarping()
     if warp_espnet_frontend == True:
         model.use_warp_frontend = True
     
@@ -357,12 +347,10 @@ def main():
     if model.frontend is not None:
         raw = True
         scp_reader = load_raw_speech(args.train_data_path_and_name_and_type)
-        # model.frontend.logmel.trainable_warp = True
     # Assume Kaldi fbank pitch
     else:
         raw = False
         scp_reader = load_fbank_input(args.train_data_path_and_name_and_type)
-        # scp_reader = load_fbank_input(args.train_data_path_and_name_and_type)
 
     data_dir = Path(args.data_dir)
     utt2spk = {line.split()[0]: line.split()[1] for line in open(data_dir / "utt2spk")}

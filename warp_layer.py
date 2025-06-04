@@ -5,7 +5,7 @@ import torch.fft
 import numpy as np
 import logging
 
-class PiecewiseLinearVTLNWarp(nn.Module):
+class Filterbankwarping(nn.Module):
     def __init__(self, num_bins=80):
         super().__init__()
         # TODO: check if we can check self.epoch
