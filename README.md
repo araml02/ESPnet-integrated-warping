@@ -44,6 +44,7 @@ We started exploring VTLN in Kaldi and we integrated the following methods in ES
   - /espnet/espnet2/bin/asr_inference.py
 
 ### 3. Run with asr.sh
+We recommend using our asr_new.sh script
 - asr.sh:
   - Stage 12: allow variable data keys "True"
   - Insert Stage 16
